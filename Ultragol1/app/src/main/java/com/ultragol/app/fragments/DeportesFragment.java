@@ -194,10 +194,53 @@ public class DeportesFragment extends Fragment {
             for (SportsMatch m : allMatches) if (m.status == wanted) filtered.add(m);
             adapter.submitMatches(filtered);
         }
+        updateEmptyState();
+    }
+
+    private void updateEmptyState() {
         View v = getView();
-        if (v != null) {
-            TextView empty = v.findViewById(R.id.dsEmpty);
-            if (empty != null) empty.setVisibility(adapter.isEmpty() ? View.VISIBLE : View.GONE);
+        if (v == null) return;
+        View container = v.findViewById(R.id.dsEmptyContainer);
+        if (container == null) return;
+        boolean isEmpty = adapter.isEmpty();
+        container.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        if (!isEmpty) return;
+
+        TextView icon = v.findViewById(R.id.dsEmptyIcon);
+        TextView message = v.findViewById(R.id.dsEmpty);
+        TextView action = v.findViewById(R.id.dsEmptyAction);
+
+        String iconText;
+        String msg;
+        boolean showAction = false;
+
+        if (activeTab == TAB_HIGHLIGHTS) {
+            iconText = "🎬";
+            msg = "Aún no hay momentos destacados disponibles.\nVuelve a intentarlo más tarde.";
+        } else if (activeTab == TAB_UPCOMING) {
+            iconText = "📅";
+            if (allLeagues) {
+                msg = "No hay partidos próximos programados por ahora.\nVuelve a intentarlo en unos minutos.";
+            } else {
+                msg = SportsApi.LEAGUES[leagueIndex][0] + " no tiene partidos próximos en este momento.";
+                showAction = true;
+            }
+        } else {
+            iconText = "📡";
+            msg = channelQuery.trim().isEmpty()
+                ? "No se encontraron canales deportivos disponibles."
+                : "Ningún canal coincide con \"" + channelQuery.trim() + "\".";
+        }
+
+        if (icon != null) icon.setText(iconText);
+        if (message != null) message.setText(msg);
+        if (action != null) {
+            action.setVisibility(showAction ? View.VISIBLE : View.GONE);
+            action.setOnClickListener(showAction ? btn -> {
+                allLeagues = true;
+                loadCurrentLeague();
+                adapter.notifyItemChanged(0);
+            } : null);
         }
     }
 

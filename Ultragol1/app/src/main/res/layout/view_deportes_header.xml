@@ -124,14 +124,54 @@
         android:layout_gravity="center"
         android:layout_marginTop="20dp"
         android:indeterminateTint="#D50000"/>
-    <TextView
-        android:id="@+id/dsEmpty"
+    <LinearLayout
+        android:id="@+id/dsEmptyContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:orientation="vertical"
         android:gravity="center"
-        android:text="No hay contenido disponible"
-        android:textColor="#77FFFFFF"
-        android:textSize="13sp"
-        android:visibility="gone"/>
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="26dp"
+        android:background="@drawable/glass_agenda_card_bg"
+        android:padding="26dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/dsEmptyIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📅"
+            android:textSize="30sp"/>
+
+        <TextView
+            android:id="@+id/dsEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="No hay contenido disponible"
+            android:textColor="#B8C4D4"
+            android:textSize="12.5sp"
+            android:lineSpacingExtra="3dp"/>
+
+        <TextView
+            android:id="@+id/dsEmptyAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="VER TODAS LAS LIGAS"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-bold"
+            android:letterSpacing="0.02"
+            android:background="@drawable/sport_stream_btn"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"/>
+    </LinearLayout>
 </LinearLayout>
