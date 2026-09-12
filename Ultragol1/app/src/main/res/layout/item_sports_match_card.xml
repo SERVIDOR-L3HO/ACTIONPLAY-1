@@ -3,11 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/sport_match_card"
-    android:padding="12dp"
+    android:background="@drawable/glass_agenda_card_bg"
+    android:layout_marginStart="14dp"
+    android:layout_marginEnd="14dp"
+    android:layout_marginTop="10dp"
+    android:padding="14dp"
     android:clickable="true"
     android:focusable="true">
 
+    <!-- Top row: league pill + live/time badge -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -15,114 +19,125 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:id="@+id/smBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="● EN VIVO"
-            android:textColor="#FFFFFF"
-            android:textSize="9sp"
-            android:fontFamily="sans-serif-bold"
-            android:background="@drawable/agenda_live_badge"
-            android:paddingStart="7dp"
-            android:paddingEnd="7dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"/>
-
-        <TextView
             android:id="@+id/smLeague"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:textColor="#88FFFFFF"
-            android:textSize="9.5sp"
-            android:fontFamily="sans-serif-medium"
+            android:textColor="#B8C4D4"
+            android:textSize="9sp"
+            android:fontFamily="sans-serif-bold"
+            android:letterSpacing="0.03"
             android:maxLines="1"
             android:ellipsize="end"
-            android:gravity="end"/>
+            android:gravity="start|center_vertical"
+            android:background="@drawable/glass_league_pill_bg"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/smBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="● EN VIVO"
+            android:textColor="#FFFFFF"
+            android:textSize="9sp"
+            android:fontFamily="sans-serif-bold"
+            android:background="@drawable/glass_live_badge_bg"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"/>
     </LinearLayout>
 
+    <!-- Matchup row: home logo/name — score/time — away name/logo -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="14dp">
 
         <ImageView
             android:id="@+id/smLogoHome"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:background="@drawable/live_logo_circle_bg"
-            android:padding="5dp"
+            android:padding="6dp"
             android:scaleType="fitCenter"/>
-
-        <TextView
-            android:id="@+id/smScore"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="VS"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-black"/>
-
-        <ImageView
-            android:id="@+id/smLogoAway"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:background="@drawable/live_logo_circle_bg"
-            android:padding="5dp"
-            android:scaleType="fitCenter"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="6dp">
 
         <TextView
             android:id="@+id/smHome"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#DDFFFFFF"
-            android:textSize="9.5sp"
+            android:layout_marginStart="10dp"
+            android:textColor="#F0F4F9"
+            android:textSize="12.5sp"
             android:fontFamily="sans-serif-bold"
             android:maxLines="1"
             android:ellipsize="end"
             android:gravity="start"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:minWidth="56dp">
+
+            <TextView
+                android:id="@+id/smScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="VS"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-black"/>
+
+            <TextView
+                android:id="@+id/smTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textColor="#8A97A8"
+                android:textSize="9sp"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/smAway"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#DDFFFFFF"
-            android:textSize="9.5sp"
+            android:layout_marginEnd="10dp"
+            android:textColor="#F0F4F9"
+            android:textSize="12.5sp"
             android:fontFamily="sans-serif-bold"
             android:maxLines="1"
             android:ellipsize="end"
             android:gravity="end"/>
-    </LinearLayout>
 
-    <TextView
-        android:id="@+id/smTime"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:gravity="center"
-        android:textColor="#66FFFFFF"
-        android:textSize="9.5sp"/>
+        <ImageView
+            android:id="@+id/smLogoAway"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/live_logo_circle_bg"
+            android:padding="6dp"
+            android:scaleType="fitCenter"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/smWatch"
         android:layout_width="match_parent"
-        android:layout_height="34dp"
-        android:layout_marginTop="10dp"
-        android:text="▶  WATCH NOW"
+        android:layout_height="36dp"
+        android:layout_marginTop="14dp"
+        android:text="▶  VER PARTIDO"
         android:textColor="#FFFFFF"
         android:textSize="10.5sp"
         android:fontFamily="sans-serif-bold"

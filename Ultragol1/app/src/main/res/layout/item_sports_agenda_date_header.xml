@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginStart="14dp"
+    android:layout_marginEnd="14dp"
+    android:layout_marginTop="18dp"
+    android:layout_marginBottom="2dp">
+
+    <View
+        android:layout_width="3dp"
+        android:layout_height="13dp"
+        android:background="@drawable/glass_accent_bar"/>
+
+    <TextView
+        android:id="@+id/adhLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="#EAF0F7"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.04"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:background="@drawable/glass_divider_line"/>
+</LinearLayout>

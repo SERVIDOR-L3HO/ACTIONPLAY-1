@@ -92,7 +92,12 @@ public class DeportesFragment extends Fragment {
         int spanCount = getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 4 : 2;
         GridLayoutManager glm = new GridLayoutManager(requireContext(), spanCount);
         glm.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-            @Override public int getSpanSize(int position) { return position == 0 ? spanCount : 1; }
+            @Override public int getSpanSize(int position) {
+                if (position == 0) return spanCount;
+                int type = adapter.getItemViewType(position);
+                boolean fullWidth = type == DeportesAdapter.TYPE_MATCH || type == DeportesAdapter.TYPE_DATE_HEADER;
+                return fullWidth ? spanCount : 1;
+            }
         });
         rv.setLayoutManager(glm);
         rv.setAdapter(adapter);

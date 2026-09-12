@@ -8,7 +8,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="58dp"
-        android:background="#061426"
+        android:background="@drawable/sport_header_premium_bg"
         android:paddingStart="14dp"
         android:paddingEnd="14dp">
         <ImageView
@@ -19,6 +19,7 @@
             android:src="@android:drawable/ic_menu_revert"
             android:tint="#DCE5F2"
             android:padding="8dp"
+            android:background="@drawable/sport_back_btn_bg"
             android:contentDescription="Volver"
             android:clickable="true"
             android:focusable="true"/>
@@ -40,9 +41,15 @@
             android:textColor="#DCE5F2"
             android:textSize="20sp"
             android:gravity="center"
+            android:background="@drawable/sport_back_btn_bg"
             android:contentDescription="Actualizar"
             android:clickable="true"
             android:focusable="true"/>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/sport_header_line"/>
     </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView

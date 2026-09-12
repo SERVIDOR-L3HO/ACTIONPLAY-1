@@ -10,7 +10,7 @@
         android:layout_height="48dp"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
-        android:background="#182536"
+        android:background="@drawable/glass_search_bg"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
         android:paddingEnd="10dp">

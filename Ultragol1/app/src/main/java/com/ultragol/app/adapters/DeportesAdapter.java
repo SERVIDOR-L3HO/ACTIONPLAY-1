@@ -28,10 +28,11 @@ import java.util.List;
  */
 public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private static final int TYPE_HEADER    = 0;
-    private static final int TYPE_MATCH     = 1;
-    private static final int TYPE_HIGHLIGHT = 2;
-    private static final int TYPE_CHANNEL   = 3;
+    public static final int TYPE_HEADER      = 0;
+    public static final int TYPE_MATCH       = 1;
+    public static final int TYPE_HIGHLIGHT   = 2;
+    public static final int TYPE_CHANNEL     = 3;
+    public static final int TYPE_DATE_HEADER = 4;
 
     public interface HeaderBinder { void bind(View header); }
     public interface OnMatchClick { void onClick(SportsMatch match); }
@@ -44,6 +45,8 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     private boolean showingHighlights = false;
     private final List<SportsMatch> matches = new ArrayList<>();
+    /** Agenda rows for the matches tab: each entry is either a String (date group label) or a SportsMatch. */
+    private final List<Object> agendaRows = new ArrayList<>();
     private final List<SportsHighlight> highlights = new ArrayList<>();
     private final List<SportsChannel> channels = new ArrayList<>();
     private boolean showingChannels = true;
@@ -61,6 +64,24 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         showingHighlights = false;
         matches.clear();
         matches.addAll(list);
+        agendaRows.clear();
+        boolean anyDate = false;
+        for (SportsMatch m : list) {
+            if (m.date != null && !m.date.trim().isEmpty()) { anyDate = true; break; }
+        }
+        if (anyDate) {
+            String lastDate = null;
+            for (SportsMatch m : list) {
+                String d = m.date == null ? "" : m.date.trim();
+                if (!d.equals(lastDate)) {
+                    agendaRows.add(d.isEmpty() ? "PRÓXIMOS PARTIDOS" : d.toUpperCase());
+                    lastDate = d;
+                }
+                agendaRows.add(m);
+            }
+        } else {
+            agendaRows.addAll(list);
+        }
         notifyDataSetChanged();
     }
 
@@ -82,18 +103,21 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     public boolean isEmpty() {
         if (showingChannels) return channels.isEmpty();
-        return showingHighlights ? highlights.isEmpty() : matches.isEmpty();
+        return showingHighlights ? highlights.isEmpty() : agendaRows.isEmpty();
     }
 
     @Override
     public int getItemViewType(int position) {
         if (position == 0) return TYPE_HEADER;
-        return showingChannels ? TYPE_CHANNEL : (showingHighlights ? TYPE_HIGHLIGHT : TYPE_MATCH);
+        if (showingChannels) return TYPE_CHANNEL;
+        if (showingHighlights) return TYPE_HIGHLIGHT;
+        int idx = position - 1;
+        return (idx < agendaRows.size() && agendaRows.get(idx) instanceof String) ? TYPE_DATE_HEADER : TYPE_MATCH;
     }
 
     @Override
     public int getItemCount() {
-        return 1 + (showingChannels ? channels.size() : (showingHighlights ? highlights.size() : matches.size()));
+        return 1 + (showingChannels ? channels.size() : (showingHighlights ? highlights.size() : agendaRows.size()));
     }
 
     @NonNull @Override
@@ -108,6 +132,9 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         } else if (viewType == TYPE_CHANNEL) {
             View v = inf.inflate(R.layout.item_sports_channel, parent, false);
             return new ChannelVH(v);
+        } else if (viewType == TYPE_DATE_HEADER) {
+            View v = inf.inflate(R.layout.item_sports_agenda_date_header, parent, false);
+            return new DateHeaderVH(v);
         } else {
             View v = inf.inflate(R.layout.item_sports_match_card, parent, false);
             return new MatchVH(v);
@@ -121,12 +148,17 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             return;
         }
         int idx = position - 1;
-        if (holder instanceof MatchVH && idx < matches.size()) {
-            bindMatch((MatchVH) holder, matches.get(idx));
-        } else if (holder instanceof HighlightVH && idx < highlights.size()) {
+        if (holder instanceof HighlightVH && idx < highlights.size()) {
             bindHighlight((HighlightVH) holder, highlights.get(idx));
         } else if (holder instanceof ChannelVH && idx < channels.size()) {
             bindChannel((ChannelVH) holder, channels.get(idx));
+        } else if (idx < agendaRows.size()) {
+            Object row = agendaRows.get(idx);
+            if (holder instanceof DateHeaderVH && row instanceof String) {
+                ((DateHeaderVH) holder).label.setText((String) row);
+            } else if (holder instanceof MatchVH && row instanceof SportsMatch) {
+                bindMatch((MatchVH) holder, (SportsMatch) row);
+            }
         }
     }
 
@@ -161,8 +193,10 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         if (m.status == SportsMatch.STATUS_LIVE) {
             h.badge.setVisibility(View.VISIBLE);
             h.badge.setText(m.minute != null && !m.minute.isEmpty() ? "● " + m.minute + "'" : "● EN VIVO");
+            h.itemView.setBackgroundResource(R.drawable.glass_agenda_card_live_bg);
         } else {
             h.badge.setVisibility(View.GONE);
+            h.itemView.setBackgroundResource(R.drawable.glass_agenda_card_bg);
         }
 
         if (m.hasScore()) {
@@ -179,7 +213,7 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         loadLogo(h.logoAway, m.awayLogo);
 
         int n = m.servers.size();
-        h.watch.setText(n > 1 ? "▶  " + n + " SERVIDORES" : "▶  WATCH NOW");
+        h.watch.setText(n > 1 ? "▶  " + n + " SERVIDORES" : "▶  VER PARTIDO");
         h.itemView.setOnClickListener(v -> { if (onMatchClick != null) onMatchClick.onClick(m); });
     }
 
@@ -204,6 +238,14 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     static class HeaderVH extends RecyclerView.ViewHolder {
         HeaderVH(View v) { super(v); }
+    }
+
+    static class DateHeaderVH extends RecyclerView.ViewHolder {
+        TextView label;
+        DateHeaderVH(View v) {
+            super(v);
+            label = v.findViewById(R.id.adhLabel);
+        }
     }
 
     static class MatchVH extends RecyclerView.ViewHolder {
