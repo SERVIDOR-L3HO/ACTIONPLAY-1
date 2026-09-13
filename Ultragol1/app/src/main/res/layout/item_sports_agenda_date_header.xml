@@ -10,6 +10,7 @@
     android:layout_marginBottom="2dp">
 
     <View
+        android:id="@+id/adhAccent"
         android:layout_width="3dp"
         android:layout_height="13dp"
         android:background="@drawable/glass_accent_bar"/>

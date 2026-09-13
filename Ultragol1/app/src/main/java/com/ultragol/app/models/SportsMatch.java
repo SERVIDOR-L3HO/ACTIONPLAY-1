@@ -36,4 +36,9 @@ public class SportsMatch {
     public boolean hasScore() {
         return !"-".equals(homeScore) && !"-".equals(awayScore);
     }
+
+    /** True for matches that belong on the agenda (excludes already-finished ones). */
+    public boolean isLiveOrUpcoming() {
+        return status == STATUS_LIVE || status == STATUS_UPCOMING;
+    }
 }

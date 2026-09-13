@@ -14,7 +14,6 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
 import com.ultragol.app.R;
-import com.ultragol.app.TvHelper;
 import com.ultragol.app.models.SportsHighlight;
 import com.ultragol.app.models.SportsChannel;
 import com.ultragol.app.models.SportsMatch;
@@ -23,16 +22,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Header (position 0, full span) + a grid of either SportsMatch or
- * SportsHighlight cards depending on the active tab, backing DeportesFragment.
+ * Header (position 0, full span) + a grid/list backing DeportesFragment, whose
+ * content depends on which of the three tabs is active:
+ *  - CANALES:   a grid of SportsChannel tiles.
+ *  - PARTIDOS:  a chronological agenda — an "EN VIVO AHORA" section (if any
+ *               match is live) followed by upcoming matches grouped by date.
+ *  - MOMENTOS:  a grid of SportsHighlight tiles.
  */
 public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    public static final int TYPE_HEADER      = 0;
-    public static final int TYPE_MATCH       = 1;
-    public static final int TYPE_HIGHLIGHT   = 2;
-    public static final int TYPE_CHANNEL     = 3;
-    public static final int TYPE_DATE_HEADER = 4;
+    public static final int TYPE_HEADER          = 0;
+    public static final int TYPE_MATCH           = 1;
+    public static final int TYPE_HIGHLIGHT       = 2;
+    public static final int TYPE_CHANNEL         = 3;
+    public static final int TYPE_SECTION_HEADER  = 4;
+
+    private enum Content { CHANNELS, AGENDA, HIGHLIGHTS }
+
+    /** A section header row in the agenda: either "EN VIVO AHORA" or a date group label. */
+    private static final class SectionHeader {
+        final String label;
+        final boolean live;
+        SectionHeader(String label, boolean live) { this.label = label; this.live = live; }
+    }
 
     public interface HeaderBinder { void bind(View header); }
     public interface OnMatchClick { void onClick(SportsMatch match); }
@@ -43,13 +55,11 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private OnMatchClick onMatchClick;
     private OnHighlightClick onHighlightClick;
 
-    private boolean showingHighlights = false;
-    private final List<SportsMatch> matches = new ArrayList<>();
-    /** Agenda rows for the matches tab: each entry is either a String (date group label) or a SportsMatch. */
+    private Content content = Content.CHANNELS;
+    /** Agenda rows: each entry is either a SectionHeader or a SportsMatch. */
     private final List<Object> agendaRows = new ArrayList<>();
     private final List<SportsHighlight> highlights = new ArrayList<>();
     private final List<SportsChannel> channels = new ArrayList<>();
-    private boolean showingChannels = true;
 
     public DeportesAdapter(Context ctx, HeaderBinder headerBinder) {
         this.ctx = ctx;
@@ -59,65 +69,90 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void setOnMatchClick(OnMatchClick l) { this.onMatchClick = l; }
     public void setOnHighlightClick(OnHighlightClick l) { this.onHighlightClick = l; }
 
-    public void submitMatches(List<SportsMatch> list) {
-        showingChannels = false;
-        showingHighlights = false;
-        matches.clear();
-        matches.addAll(list);
+    /** Builds the PARTIDOS agenda: live matches first, then upcoming grouped by date. */
+    public void submitAgenda(List<SportsMatch> matches) {
+        content = Content.AGENDA;
         agendaRows.clear();
-        boolean anyDate = false;
-        for (SportsMatch m : list) {
-            if (m.date != null && !m.date.trim().isEmpty()) { anyDate = true; break; }
+
+        List<SportsMatch> live = new ArrayList<>();
+        List<SportsMatch> upcoming = new ArrayList<>();
+        for (SportsMatch m : matches) {
+            if (m.status == SportsMatch.STATUS_LIVE) live.add(m);
+            else if (m.status == SportsMatch.STATUS_UPCOMING) upcoming.add(m);
         }
-        if (anyDate) {
-            String lastDate = null;
-            for (SportsMatch m : list) {
-                String d = m.date == null ? "" : m.date.trim();
-                if (!d.equals(lastDate)) {
-                    agendaRows.add(d.isEmpty() ? "PRÓXIMOS PARTIDOS" : d.toUpperCase());
-                    lastDate = d;
-                }
-                agendaRows.add(m);
+
+        if (!live.isEmpty()) {
+            agendaRows.add(new SectionHeader("EN VIVO AHORA", true));
+            agendaRows.addAll(live);
+        }
+
+        if (!upcoming.isEmpty()) {
+            boolean anyDate = false;
+            for (SportsMatch m : upcoming) {
+                if (m.date != null && !m.date.trim().isEmpty()) { anyDate = true; break; }
             }
-        } else {
-            agendaRows.addAll(list);
+            if (anyDate) {
+                String lastDate = null;
+                for (SportsMatch m : upcoming) {
+                    String d = m.date == null ? "" : m.date.trim();
+                    if (!d.equals(lastDate)) {
+                        agendaRows.add(new SectionHeader(d.isEmpty() ? "PRÓXIMOS PARTIDOS" : d.toUpperCase(), false));
+                        lastDate = d;
+                    }
+                    agendaRows.add(m);
+                }
+            } else {
+                if (!live.isEmpty()) agendaRows.add(new SectionHeader("PRÓXIMOS PARTIDOS", false));
+                agendaRows.addAll(upcoming);
+            }
         }
         notifyDataSetChanged();
     }
 
     public void submitHighlights(List<SportsHighlight> list) {
-        showingChannels = false;
-        showingHighlights = true;
+        content = Content.HIGHLIGHTS;
         highlights.clear();
         highlights.addAll(list);
         notifyDataSetChanged();
     }
 
     public void submitChannels(List<SportsChannel> list) {
-        showingChannels = true;
-        showingHighlights = false;
+        content = Content.CHANNELS;
         channels.clear();
         channels.addAll(list);
         notifyDataSetChanged();
     }
 
     public boolean isEmpty() {
-        if (showingChannels) return channels.isEmpty();
-        return showingHighlights ? highlights.isEmpty() : agendaRows.isEmpty();
+        switch (content) {
+            case CHANNELS:   return channels.isEmpty();
+            case HIGHLIGHTS: return highlights.isEmpty();
+            default:         return agendaRows.isEmpty();
+        }
     }
 
     @Override
     public int getItemViewType(int position) {
         if (position == 0) return TYPE_HEADER;
-        if (showingChannels) return TYPE_CHANNEL;
-        if (showingHighlights) return TYPE_HIGHLIGHT;
         int idx = position - 1;
-        return (idx < agendaRows.size() && agendaRows.get(idx) instanceof String) ? TYPE_DATE_HEADER : TYPE_MATCH;
+        switch (content) {
+            case CHANNELS:   return TYPE_CHANNEL;
+            case HIGHLIGHTS: return TYPE_HIGHLIGHT;
+            default:
+                return (idx < agendaRows.size() && agendaRows.get(idx) instanceof SectionHeader)
+                    ? TYPE_SECTION_HEADER : TYPE_MATCH;
+        }
     }
 
     @Override
     public int getItemCount() {
-        return 1 + (showingChannels ? channels.size() : (showingHighlights ? highlights.size() : agendaRows.size()));
+        int rows;
+        switch (content) {
+            case CHANNELS:   rows = channels.size(); break;
+            case HIGHLIGHTS: rows = highlights.size(); break;
+            default:         rows = agendaRows.size(); break;
+        }
+        return 1 + rows;
     }
 
     @NonNull @Override
@@ -132,9 +167,9 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         } else if (viewType == TYPE_CHANNEL) {
             View v = inf.inflate(R.layout.item_sports_channel, parent, false);
             return new ChannelVH(v);
-        } else if (viewType == TYPE_DATE_HEADER) {
+        } else if (viewType == TYPE_SECTION_HEADER) {
             View v = inf.inflate(R.layout.item_sports_agenda_date_header, parent, false);
-            return new DateHeaderVH(v);
+            return new SectionHeaderVH(v);
         } else {
             View v = inf.inflate(R.layout.item_sports_match_card, parent, false);
             return new MatchVH(v);
@@ -154,12 +189,17 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             bindChannel((ChannelVH) holder, channels.get(idx));
         } else if (idx < agendaRows.size()) {
             Object row = agendaRows.get(idx);
-            if (holder instanceof DateHeaderVH && row instanceof String) {
-                ((DateHeaderVH) holder).label.setText((String) row);
+            if (holder instanceof SectionHeaderVH && row instanceof SectionHeader) {
+                bindSectionHeader((SectionHeaderVH) holder, (SectionHeader) row);
             } else if (holder instanceof MatchVH && row instanceof SportsMatch) {
                 bindMatch((MatchVH) holder, (SportsMatch) row);
             }
         }
+    }
+
+    private void bindSectionHeader(SectionHeaderVH h, SectionHeader s) {
+        h.label.setText(s.label);
+        h.accent.setBackgroundResource(s.live ? R.drawable.glass_accent_bar_live : R.drawable.glass_accent_bar);
     }
 
     private void bindChannel(ChannelVH h, SportsChannel c) {
@@ -240,11 +280,13 @@ public class DeportesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         HeaderVH(View v) { super(v); }
     }
 
-    static class DateHeaderVH extends RecyclerView.ViewHolder {
+    static class SectionHeaderVH extends RecyclerView.ViewHolder {
         TextView label;
-        DateHeaderVH(View v) {
+        View accent;
+        SectionHeaderVH(View v) {
             super(v);
-            label = v.findViewById(R.id.adhLabel);
+            label  = v.findViewById(R.id.adhLabel);
+            accent = v.findViewById(R.id.adhAccent);
         }
     }
 
