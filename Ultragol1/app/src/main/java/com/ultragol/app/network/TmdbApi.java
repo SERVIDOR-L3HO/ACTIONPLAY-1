@@ -410,6 +410,37 @@ public class TmdbApi {
         return parse(arr, contentType);
     }
 
+    /** Result of {@link #fetchCollectionForMovie}: the saga's display name plus its movies. */
+    public static final class SagaResult {
+        public final String name;
+        public final List<ContentItem> parts;
+        SagaResult(String name, List<ContentItem> parts) { this.name = name; this.parts = parts; }
+    }
+
+    /**
+     * If this movie belongs to a franchise/saga (TMDB "collection"), returns
+     * its display name plus every entry in that collection, sorted by
+     * release year. Empty parts for standalone movies, TV/anime/doramas, or
+     * on any error — collections are a movie-only TMDB concept.
+     */
+    public static SagaResult fetchCollectionForMovie(int movieTmdbId) {
+        try {
+            JSONObject details = new JSONObject(fetch("/movie/" + movieTmdbId + "?language=es-MX"));
+            JSONObject collection = details.optJSONObject("belongs_to_collection");
+            if (collection == null) return new SagaResult("", new ArrayList<>());
+            int collectionId = collection.optInt("id", 0);
+            if (collectionId == 0) return new SagaResult(collection.optString("name", ""), new ArrayList<>());
+
+            JSONObject root = new JSONObject(fetch("/collection/" + collectionId + "?language=es-MX"));
+            JSONArray parts = root.optJSONArray("parts");
+            List<ContentItem> list = parts != null ? parse(parts, ContentItem.TYPE_MOVIE) : new ArrayList<>();
+            list.sort((a, b) -> a.getYear().compareTo(b.getYear()));
+            return new SagaResult(root.optString("name", collection.optString("name", "")), list);
+        } catch (Exception e) {
+            return new SagaResult("", new ArrayList<>());
+        }
+    }
+
     /**
      * Returns the YouTube video key for the official trailer of a movie or TV show.
      * Tries Spanish first, falls back to English. Returns "" if nothing found.

@@ -74,6 +74,7 @@ public class DetailActivity extends AppCompatActivity {
         if (item == null) { finish(); return; }
 
         bindViews();
+        loadSaga();
         loadRelated();
         loadTrailer();
     }
@@ -873,6 +874,47 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+
+    /** Shows the "saga completa" row when this movie belongs to a TMDB collection/franchise. */
+    private void loadSaga() {
+        View rowSaga = findViewById(R.id.rowSaga);
+        if (rowSaga == null) return;
+        if (item.getContentType() != ContentItem.TYPE_MOVIE) {
+            rowSaga.setVisibility(View.GONE);
+            return;
+        }
+
+        TextView rowTitle = rowSaga.findViewById(R.id.rowTitle);
+        RecyclerView rv    = rowSaga.findViewById(R.id.rowRv);
+        View verTodos      = rowSaga.findViewById(R.id.rowVerTodos);
+        if (verTodos != null) verTodos.setVisibility(View.GONE);
+        if (rv != null) rv.setLayoutManager(
+            new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+        int currentId = item.getTmdbId();
+        Handler h = new Handler(android.os.Looper.getMainLooper());
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        pool.execute(() -> {
+            TmdbApi.SagaResult saga = TmdbApi.fetchCollectionForMovie(currentId);
+            List<ContentItem> parts = new ArrayList<>();
+            for (ContentItem c : saga.parts) if (c.getTmdbId() != currentId) parts.add(c);
+            final List<ContentItem> finalParts = parts;
+            final String title = saga.name != null && !saga.name.isEmpty() ? saga.name.toUpperCase() : "SAGA COMPLETA";
+            h.post(() -> {
+                if (isFinishing() || finalParts.isEmpty()) {
+                    rowSaga.setVisibility(View.GONE);
+                    return;
+                }
+                rowSaga.setVisibility(View.VISIBLE);
+                if (rowTitle != null) rowTitle.setText(title);
+                if (rv != null) {
+                    rv.setAdapter(new ContentRowAdapter(this, finalParts));
+                    TvHelper.makeFocusable(rv);
+                }
+            });
+        });
+        pool.shutdown();
+    }
 
     private void loadRelated() {
         View rowRelated = findViewById(R.id.rowRelated);

@@ -504,6 +504,12 @@
             </LinearLayout>
             <!-- ═══════════════════════════════════════════════════════════════ -->
 
+            <!-- Saga/franchise section (movies only, hidden unless the title belongs to one) -->
+            <include
+                android:id="@+id/rowSaga"
+                layout="@layout/row_section"
+                android:visibility="gone"/>
+
             <!-- Related section -->
             <include android:id="@+id/rowRelated" layout="@layout/row_section"/>
 
