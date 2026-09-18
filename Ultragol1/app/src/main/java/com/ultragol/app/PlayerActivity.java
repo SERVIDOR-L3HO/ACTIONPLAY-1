@@ -854,12 +854,23 @@ public class PlayerActivity extends AppCompatActivity {
     // ── Detail panel ──────────────────────────────────────────────────────────
 
     private void bindDetailPanel() {
-        TextView pdTitle    = findViewById(R.id.pdTitle);
-        TextView pdMeta     = findViewById(R.id.pdMeta);
-        TextView pdOverview = findViewById(R.id.pdOverview);
+        TextView pdTitle     = findViewById(R.id.pdTitle);
+        TextView pdMeta      = findViewById(R.id.pdMeta);
+        TextView pdOverview  = findViewById(R.id.pdOverview);
+        TextView pdTypeBadge = findViewById(R.id.pdTypeBadge);
 
         if (pdTitle != null) pdTitle.setText(item.getTitle());
         if (pdOverview != null) pdOverview.setText(item.getOverview());
+        if (pdTypeBadge != null) {
+            switch (item.getContentType()) {
+                case ContentItem.TYPE_SERIES: pdTypeBadge.setText("SERIE");   break;
+                case ContentItem.TYPE_ANIME:  pdTypeBadge.setText("ANIME");   break;
+                case ContentItem.TYPE_DORAMA: pdTypeBadge.setText("DORAMA");  break;
+                case ContentItem.TYPE_SPORT:  pdTypeBadge.setText("EN VIVO"); break;
+                case ContentItem.TYPE_TV:     pdTypeBadge.setText("TV");      break;
+                default:                      pdTypeBadge.setText("PELÍCULA"); break;
+            }
+        }
 
         // ── Carga poster/backdrop en el overlay de carga ───────────────────────
         ImageView posterBg = webviewContainer != null

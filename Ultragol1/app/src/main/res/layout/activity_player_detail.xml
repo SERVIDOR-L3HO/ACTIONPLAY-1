@@ -62,9 +62,11 @@
                     android:background="@drawable/gradient_top_black">
 
                     <ImageView android:id="@+id/btnPlayerBack"
-                        android:layout_width="44dp" android:layout_height="44dp"
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:layout_marginStart="4dp"
                         android:src="@drawable/ic_back"
-                        android:tint="#FFFFFF" android:padding="10dp"
+                        android:tint="#FFFFFF" android:padding="9dp"
+                        android:background="@drawable/back_btn_glass"
                         android:clickable="true" android:focusable="true"/>
 
                     <TextView android:id="@+id/playerTitle"
@@ -83,14 +85,16 @@
                         android:text="● STREAM"
                         android:textColor="#FF6B35" android:textSize="10sp"
                         android:fontFamily="sans-serif-bold" android:letterSpacing="0.05"
-                        android:background="@drawable/player_capture_bg"
+                        android:background="@drawable/player_stream_badge_glass"
                         android:visibility="gone"/>
 
                     <!-- Fullscreen toggle -->
                     <ImageView android:id="@+id/btnPlayerFullscreen"
-                        android:layout_width="44dp" android:layout_height="44dp"
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:layout_marginEnd="4dp"
                         android:src="@drawable/ic_media_fullscreen"
-                        android:tint="#FFFFFF" android:padding="10dp"
+                        android:tint="#FFFFFF" android:padding="9dp"
+                        android:background="@drawable/back_btn_glass"
                         android:clickable="true" android:focusable="true"/>
                 </LinearLayout>
 
@@ -119,16 +123,33 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#000000"
+                android:background="@drawable/player_detail_panel_bg"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:paddingTop="16dp"
+                android:paddingTop="18dp"
                 android:paddingBottom="8dp">
+
+                <!-- Type badge (PELÍCULA / SERIE) -->
+                <TextView
+                    android:id="@+id/pdTypeBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/detail_type_badge_bg"
+                    android:text="PELÍCULA"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:letterSpacing="0.06"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"/>
 
                 <TextView
                     android:id="@+id/pdTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:textColor="#FFFFFF"
                     android:textSize="22sp"
                     android:fontFamily="sans-serif-black"
@@ -138,9 +159,15 @@
                     android:id="@+id/pdMeta"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="#88FFFFFF"
-                    android:textSize="13sp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/player_meta_pill_bg"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="12.5sp"
+                    android:fontFamily="sans-serif-medium"
                     android:letterSpacing="0.02"/>
 
                 <!-- Action buttons row: Me gusta / Descargar / Reportar / Compartir -->
@@ -161,7 +188,7 @@
                         android:paddingBottom="8dp"
                         android:clickable="true"
                         android:focusable="true"
-                        android:background="@drawable/action_btn_bg">
+                        android:background="@drawable/player_action_btn_glass">
                         <TextView android:id="@+id/pdLikeIcon"
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="♡" android:textColor="#FFFFFF" android:textSize="18sp"/>
@@ -184,7 +211,7 @@
                         android:paddingBottom="8dp"
                         android:clickable="true"
                         android:focusable="true"
-                        android:background="@drawable/action_btn_bg">
+                        android:background="@drawable/player_action_btn_glass">
                         <TextView android:id="@+id/pdDownloadIcon"
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="⬇" android:textColor="#4FC3F7" android:textSize="18sp"/>
@@ -207,7 +234,7 @@
                         android:paddingBottom="8dp"
                         android:clickable="true"
                         android:focusable="true"
-                        android:background="@drawable/action_btn_bg">
+                        android:background="@drawable/player_action_btn_glass">
                         <ImageView
                             android:layout_width="22dp"
                             android:layout_height="22dp"
@@ -233,7 +260,7 @@
                         android:paddingBottom="8dp"
                         android:clickable="true"
                         android:focusable="true"
-                        android:background="@drawable/action_btn_bg">
+                        android:background="@drawable/player_action_btn_glass">
                         <TextView
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="⊞" android:textColor="#FFFFFF" android:textSize="18sp"/>
@@ -245,18 +272,44 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <View android:layout_width="match_parent" android:layout_height="1dp"
-                    android:layout_marginTop="18dp" android:background="#1AFFFFFF"/>
-
-                <TextView
-                    android:id="@+id/pdOverview"
+                <!-- ══ SINOPSIS glass card ══════════════════════════════════════ -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:textColor="#DDFFFFFF"
-                    android:textSize="14sp"
-                    android:lineSpacingMultiplier="1.6"
-                    android:fontFamily="sans-serif"/>
+                    android:orientation="vertical"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/synopsis_glass_bg"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SINOPSIS"
+                        android:textColor="#66FFFFFF"
+                        android:textSize="10sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.20"/>
+
+                    <View
+                        android:layout_width="22dp"
+                        android:layout_height="2dp"
+                        android:layout_marginTop="5dp"
+                        android:background="#FF6B35"/>
+
+                    <TextView
+                        android:id="@+id/pdOverview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="#DDFFFFFF"
+                        android:textSize="14sp"
+                        android:lineSpacingMultiplier="1.6"
+                        android:fontFamily="sans-serif"/>
+                </LinearLayout>
+                <!-- ═══════════════════════════════════════════════════════════ -->
             </LinearLayout>
 
             <!-- Similar movies -->
