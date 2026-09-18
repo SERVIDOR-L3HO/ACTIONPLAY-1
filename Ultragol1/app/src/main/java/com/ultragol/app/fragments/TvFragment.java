@@ -7,17 +7,37 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+import com.google.android.exoplayer2.video.VideoSize;
 
 import com.ultragol.app.MediaActivity;
 import com.ultragol.app.R;
+import com.ultragol.app.SearchActivity;
+import com.ultragol.app.TvFavoritesManager;
 import com.ultragol.app.adapters.TvAdapter;
 import com.ultragol.app.models.TvChannel;
+import com.ultragol.app.network.A7xConstants;
 import com.ultragol.app.network.A7xIptvApi;
 
 import java.io.BufferedReader;
@@ -26,13 +46,21 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * TV en vivo — canal reproduciéndose incrustado arriba (ExoPlayer, sin salir
+ * de la pantalla) + tabs Categoría/Favoritos + chips de categoría + lista de
+ * canales numerada. Tocar una fila cambia lo que suena arriba; el botón de
+ * pantalla completa abre el reproductor inmersivo (MediaActivity) para ver
+ * el canal actual a pantalla completa.
+ */
 public class TvFragment extends Fragment {
 
     // ── Categorías del menú ───────────────────────────────────────────────────
@@ -47,9 +75,6 @@ public class TvFragment extends Fragment {
             TvChannel.CAT_NEGOCIOS,
             TvChannel.CAT_CIENCIA
     );
-
-    /** Número de columnas para la cuadrícula principal de canales. */
-    private static final int GRID_SPAN = 2;
 
     /** Canales de respaldo siempre disponibles — accesibles desde otras clases. */
     public static TvChannel[] getFallbackChannels() { return FALLBACK; }
@@ -216,12 +241,26 @@ public class TvFragment extends Fragment {
 
     private static final int MAX_PER_SOURCE = 50;
 
+    private static final int COLOR_ACTIVE   = 0xFFFFFFFF;
+    private static final int COLOR_INACTIVE = 0xFF8A8296;
+    private static final int COLOR_PURPLE   = 0xFF8B5CF6;
+    private static final int COLOR_TRANSPARENT = 0x00000000;
+
     // ── Estado ────────────────────────────────────────────────────────────────
     private TvAdapter adapter;
     private String selectedCategory = TvChannel.CAT_TODOS;
+    private boolean favoritesTab = false;
     private final List<TvChannel> allChannels = new ArrayList<>();
     private ExecutorService executor;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    // ── Reproductor incrustado ───────────────────────────────────────────────
+    private ExoPlayer player;
+    private PlayerView playerView;
+    private ProgressBar playerLoading;
+    private TextView qualityBadge;
+    private TvChannel currentChannel;
+    private boolean muted = false;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -239,28 +278,15 @@ public class TvFragment extends Fragment {
         executor = Executors.newFixedThreadPool(8);
         synchronized (allChannels) { allChannels.clear(); }
 
+        View btnSearch = view.findViewById(R.id.btnTvSearch);
+        if (btnSearch != null) btnSearch.setOnClickListener(v ->
+            startActivity(new Intent(requireContext(), SearchActivity.class)));
+
         RecyclerView rv = view.findViewById(R.id.rvTvChannels);
-        adapter = new TvAdapter(requireContext(), CATEGORIES);
-
-        // ── GridLayoutManager: 2 columns for channels, full-width for headers ─
-        GridLayoutManager glm = new GridLayoutManager(requireContext(), GRID_SPAN);
-        glm.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-            @Override
-            public int getSpanSize(int position) {
-                int type = adapter.getItemViewType(position);
-                // Channel cards take 1 span; everything else spans all columns
-                return (type == TvAdapter.TYPE_CHANNEL) ? 1 : GRID_SPAN;
-            }
-        });
-        rv.setLayoutManager(glm);
+        adapter = new TvAdapter(requireContext(), this::bindHeader);
+        rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
-
         adapter.setOnChannelClickListener(this::playChannel);
-        adapter.setOnCategoryClickListener(cat -> {
-            selectedCategory = cat;
-            adapter.setSelectedCategory(cat);
-            applyFilter();
-        });
 
         // Show fallback channels immediately
         synchronized (allChannels) {
@@ -277,6 +303,16 @@ public class TvFragment extends Fragment {
         loadRemoteChannels();
     }
 
+    @Override public void onPause() {
+        super.onPause();
+        if (player != null) player.setPlayWhenReady(false);
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        if (player != null) player.setPlayWhenReady(true);
+    }
+
     @Override public void onDestroyView() {
         super.onDestroyView();
         if (executor != null) {
@@ -284,6 +320,13 @@ public class TvFragment extends Fragment {
             executor = null;
         }
         mainHandler.removeCallbacksAndMessages(null);
+        if (player != null) {
+            player.release();
+            player = null;
+        }
+        playerView = null;
+        playerLoading = null;
+        qualityBadge = null;
     }
 
     // ── Carga canales A7X ─────────────────────────────────────────────────────
@@ -322,22 +365,189 @@ public class TvFragment extends Fragment {
         });
     }
 
-    // ── Reproducción ──────────────────────────────────────────────────────────
+    // ── Reproducción incrustada ──────────────────────────────────────────────
 
+    /** Tap en una fila: carga ese canal en el reproductor de arriba (no navega). */
     private void playChannel(TvChannel ch) {
+        currentChannel = ch;
+        if (qualityBadge != null) qualityBadge.setText("LIVE");
+        adapter.setCurrentUrl(ch.url);
+        loadIntoPlayer(ch);
+    }
+
+    /** Abre el canal actual en el reproductor de pantalla completa existente. */
+    private void openFullscreen(TvChannel ch) {
         Intent intent = new Intent(requireContext(), MediaActivity.class);
         intent.putExtra("url",             ch.url);
         intent.putExtra("title",           ch.name);
         intent.putExtra("is_m3u8",         ch.url.contains(".m3u8") || ch.url.contains("m3u"));
         intent.putExtra("referer",         "");
-        boolean isA7xStream = !ch.url.contains("iptv-org.github.io")
-                && !ch.url.contains("akamaized.net")
-                && !ch.url.contains("akamaihd.net")
-                && !ch.url.contains("cloudfront.net")
-                && !ch.url.contains("wurl.tv")
-                && !ch.url.contains("samsung.wurl");
-        intent.putExtra("use_a7x_headers", isA7xStream);
+        intent.putExtra("use_a7x_headers", isA7xStream(ch.url));
         startActivity(intent);
+    }
+
+    private boolean isA7xStream(String url) {
+        return !url.contains("iptv-org.github.io")
+                && !url.contains("akamaized.net")
+                && !url.contains("akamaihd.net")
+                && !url.contains("cloudfront.net")
+                && !url.contains("wurl.tv")
+                && !url.contains("samsung.wurl");
+    }
+
+    private void ensurePlayerReady() {
+        if (player != null) return;
+        player = new ExoPlayer.Builder(requireContext()).build();
+        player.setVolume(muted ? 0f : 1f);
+        player.addListener(new Player.Listener() {
+            @Override public void onPlaybackStateChanged(int state) {
+                if (playerLoading != null) {
+                    playerLoading.setVisibility(state == Player.STATE_BUFFERING ? View.VISIBLE : View.GONE);
+                }
+            }
+            @Override public void onVideoSizeChanged(@NonNull VideoSize videoSize) {
+                if (qualityBadge != null && videoSize.height > 0) {
+                    qualityBadge.setText(videoSize.height + "p");
+                }
+            }
+            @Override public void onPlayerError(@NonNull PlaybackException error) {
+                if (playerLoading != null) playerLoading.setVisibility(View.GONE);
+            }
+        });
+        if (playerView != null) playerView.setPlayer(player);
+        if (currentChannel != null) loadIntoPlayer(currentChannel);
+    }
+
+    private void loadIntoPlayer(TvChannel ch) {
+        if (player == null) return;
+        boolean useA7xHeaders = isA7xStream(ch.url);
+        String ua = useA7xHeaders
+                ? A7xConstants.SECURE_USER_AGENT
+                : "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36";
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("User-Agent", ua);
+        if (useA7xHeaders) headers.put("X-A7X-Client", A7xConstants.SECURE_CLIENT_ID);
+
+        DataSource.Factory dsFactory = new DefaultHttpDataSource.Factory()
+                .setUserAgent(ua)
+                .setDefaultRequestProperties(headers)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(20_000);
+
+        MediaSource src = new HlsMediaSource.Factory(dsFactory)
+                .createMediaSource(MediaItem.fromUri(ch.url));
+        player.setMediaSource(src);
+        player.setPlayWhenReady(true);
+        player.prepare();
+    }
+
+    // ── Header: reproductor + tabs + chips ───────────────────────────────────
+
+    private void bindHeader(View header) {
+        PlayerView pv = header.findViewById(R.id.tvPlayerView);
+        if (pv != null) playerView = pv;
+        playerLoading = header.findViewById(R.id.tvPlayerLoading);
+        qualityBadge  = header.findViewById(R.id.tvQualityBadge);
+        ensurePlayerReady();
+        if (playerView != null && playerView.getPlayer() != player) playerView.setPlayer(player);
+
+        TextView nowPlaying = header.findViewById(R.id.tvNowPlayingName);
+        if (nowPlaying != null) nowPlaying.setText(currentChannel != null ? currentChannel.name : "");
+
+        View share = header.findViewById(R.id.btnTvShare);
+        if (share != null) share.setOnClickListener(v -> {
+            if (currentChannel == null) return;
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, "Estoy viendo " + currentChannel.name + " en vivo 📺");
+            startActivity(Intent.createChooser(shareIntent, "Compartir canal"));
+        });
+
+        View help = header.findViewById(R.id.btnTvHelp);
+        if (help != null) help.setOnClickListener(v -> Toast.makeText(requireContext(),
+            "Si el canal no carga, prueba con otro de la lista de abajo.", Toast.LENGTH_SHORT).show());
+
+        TextView fav = header.findViewById(R.id.btnTvFav);
+        if (fav != null) {
+            boolean isFav = currentChannel != null
+                && TvFavoritesManager.isFavorite(requireContext(), currentChannel.url);
+            fav.setText(isFav ? "♥" : "♡");
+            fav.setTextColor(isFav ? 0xFFFF5C8A : COLOR_ACTIVE);
+            fav.setOnClickListener(v -> {
+                if (currentChannel == null) return;
+                TvFavoritesManager.toggle(requireContext(), currentChannel.url);
+                adapter.notifyItemChanged(0);
+                if (favoritesTab) applyFilter();
+            });
+        }
+
+        TextView mute = header.findViewById(R.id.btnTvMute);
+        if (mute != null) {
+            mute.setText(muted ? "🔇" : "🔊");
+            mute.setOnClickListener(v -> {
+                muted = !muted;
+                if (player != null) player.setVolume(muted ? 0f : 1f);
+                mute.setText(muted ? "🔇" : "🔊");
+            });
+        }
+
+        ImageView fullscreen = header.findViewById(R.id.btnTvFullscreen);
+        if (fullscreen != null) fullscreen.setOnClickListener(v -> {
+            if (currentChannel != null) openFullscreen(currentChannel);
+        });
+
+        bindTabs(header);
+        buildChipsOnce(header);
+        updateChipsSelection(header);
+    }
+
+    private void bindTabs(View header) {
+        LinearLayout catWrap = header.findViewById(R.id.tabCategoriaWrap);
+        LinearLayout favWrap = header.findViewById(R.id.tabFavoritosWrap);
+        TextView tabCategoria = header.findViewById(R.id.tabCategoria);
+        TextView tabFavoritos = header.findViewById(R.id.tabFavoritos);
+        View indCategoria = header.findViewById(R.id.indCategoria);
+        View indFavoritos = header.findViewById(R.id.indFavoritos);
+
+        if (tabCategoria != null) tabCategoria.setTextColor(favoritesTab ? COLOR_INACTIVE : COLOR_ACTIVE);
+        if (tabFavoritos != null) tabFavoritos.setTextColor(favoritesTab ? COLOR_ACTIVE : COLOR_INACTIVE);
+        if (indCategoria != null) indCategoria.setBackgroundColor(favoritesTab ? COLOR_TRANSPARENT : COLOR_PURPLE);
+        if (indFavoritos != null) indFavoritos.setBackgroundColor(favoritesTab ? COLOR_PURPLE : COLOR_TRANSPARENT);
+
+        if (catWrap != null) catWrap.setOnClickListener(v -> { favoritesTab = false; applyFilter(); });
+        if (favWrap != null) favWrap.setOnClickListener(v -> { favoritesTab = true; applyFilter(); });
+    }
+
+    private void buildChipsOnce(View header) {
+        LinearLayout container = header.findViewById(R.id.chipContainer);
+        if (container == null || container.getChildCount() == CATEGORIES.size()) return;
+        container.removeAllViews();
+        LayoutInflater li = LayoutInflater.from(requireContext());
+        for (String cat : CATEGORIES) {
+            View chip = li.inflate(R.layout.item_tv_chip, container, false);
+            TextView tv = chip.findViewById(R.id.tvChip);
+            if (tv != null) tv.setText(cat);
+            chip.setOnClickListener(v -> {
+                selectedCategory = cat;
+                favoritesTab = false;
+                applyFilter();
+            });
+            container.addView(chip);
+        }
+    }
+
+    private void updateChipsSelection(View header) {
+        LinearLayout container = header.findViewById(R.id.chipContainer);
+        if (container == null) return;
+        for (int i = 0; i < container.getChildCount() && i < CATEGORIES.size(); i++) {
+            View chip = container.getChildAt(i);
+            TextView tv = chip.findViewById(R.id.tvChip);
+            if (tv == null) continue;
+            boolean active = !favoritesTab && CATEGORIES.get(i).equals(selectedCategory);
+            tv.setBackgroundResource(active ? R.drawable.tv_chip_active_purple : R.drawable.tv_chip_inactive_purple);
+            tv.setTextColor(active ? 0xFFFFFFFF : 0xCCFFFFFF);
+        }
     }
 
     // ── Filtrado ──────────────────────────────────────────────────────────────
@@ -345,15 +555,26 @@ public class TvFragment extends Fragment {
     private void applyFilter() {
         List<TvChannel> filtered = new ArrayList<>();
         synchronized (allChannels) {
-            for (TvChannel ch : allChannels) {
-                if (ch.isAlive &&
-                    (selectedCategory.equals(TvChannel.CAT_TODOS) ||
-                     ch.category.equals(selectedCategory))) {
-                    filtered.add(ch);
+            if (favoritesTab) {
+                Set<String> favs = TvFavoritesManager.getAll(requireContext());
+                for (TvChannel ch : allChannels) {
+                    if (ch.isAlive && favs.contains(ch.url)) filtered.add(ch);
+                }
+            } else {
+                for (TvChannel ch : allChannels) {
+                    if (ch.isAlive &&
+                        (selectedCategory.equals(TvChannel.CAT_TODOS) ||
+                         ch.category.equals(selectedCategory))) {
+                        filtered.add(ch);
+                    }
                 }
             }
         }
         adapter.setChannels(filtered);
+        if (currentChannel == null && !filtered.isEmpty()) {
+            playChannel(filtered.get(0));
+        }
+        adapter.notifyItemChanged(0);
     }
 
     // ── Carga remota de M3U ───────────────────────────────────────────────────

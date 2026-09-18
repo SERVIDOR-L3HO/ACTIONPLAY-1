@@ -1,159 +1,217 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
 
-    <!-- Fondo con gradiente premium -->
-    <LinearLayout
+    <!-- ══ Reproductor en vivo incrustado ══════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/tvPlayerContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/tv_hero_bg"
-        android:paddingTop="28dp"
-        android:paddingBottom="24dp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp">
+        android:layout_height="212dp"
+        android:background="#000000">
 
-        <!-- Badge LIVE -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/tv_live_pill"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:layout_marginBottom="14dp">
-
-            <View
-                android:layout_width="7dp"
-                android:layout_height="7dp"
-                android:background="@drawable/red_dot"
-                android:layout_marginEnd="6dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="EN VIVO"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08"/>
-        </LinearLayout>
-
-        <!-- Título ULTRA TV -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="ULTRA"
-                android:textColor="#FFFFFF"
-                android:textSize="34sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="-0.02"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="TV"
-                android:textColor="@color/red_primary"
-                android:textSize="34sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="-0.02"/>
-        </LinearLayout>
-
-        <!-- Subtítulo -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Televisión en vivo · Listas IPTV"
-            android:textColor="#66FFFFFF"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif"
-            android:letterSpacing="0.02"
-            android:layout_marginBottom="20dp"/>
-
-        <!-- Stats row -->
-        <LinearLayout
+        <com.google.android.exoplayer2.ui.PlayerView
+            android:id="@+id/tvPlayerView"
             android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:resize_mode="zoom"
+            app:use_controller="false"/>
+
+        <ProgressBar
+            android:id="@+id/tvPlayerLoading"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/tv_purple"/>
+
+        <!-- Top overlay controls -->
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="10dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Canales count -->
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/btnTvShare"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:text="↗"
+                android:textColor="#FFFFFFFF"
+                android:textSize="17sp"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <FrameLayout
+                android:id="@+id/btnTvHelp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/tv_overlay_help_bg"
+                android:clickable="true"
+                android:focusable="true">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="?"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"/>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvQualityBadge"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/tv_stat_bg"
-                android:padding="12dp"
-                android:layout_marginEnd="8dp">
+                android:layout_marginStart="10dp"
+                android:background="@drawable/tv_overlay_quality_bg"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="LIVE"
+                android:textColor="#FFFFFFFF"
+                android:textSize="10sp"
+                android:fontFamily="sans-serif-bold"/>
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="2dp">
-                    <View
-                        android:layout_width="6dp"
-                        android:layout_height="6dp"
-                        android:background="@drawable/red_dot"
-                        android:layout_marginEnd="5dp"/>
-                    <TextView
-                        android:id="@+id/tvChannelCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="..."
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
-                        android:fontFamily="sans-serif-black"/>
-                </LinearLayout>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="canales en vivo"
-                    android:textColor="#55FFFFFF"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif"/>
-            </LinearLayout>
-
-            <!-- HD badge -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/tv_stat_bg"
-                android:padding="12dp"
-                android:layout_marginStart="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="HD · HLS"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-black"
-                    android:layout_marginBottom="2dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="streaming directo"
-                    android:textColor="#55FFFFFF"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif"/>
-            </LinearLayout>
+            <TextView
+                android:id="@+id/btnTvFav"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:text="♡"
+                android:textColor="#FFFFFFFF"
+                android:textSize="19sp"
+                android:clickable="true"
+                android:focusable="true"/>
         </LinearLayout>
 
+        <!-- Volume toggle -->
+        <TextView
+            android:id="@+id/btnTvMute"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="8dp"
+            android:gravity="center"
+            android:text="🔊"
+            android:textSize="16sp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- Fullscreen -->
+        <ImageView
+            android:id="@+id/btnTvFullscreen"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:padding="7dp"
+            android:src="@drawable/ic_media_fullscreen"
+            android:tint="#FFFFFFFF"
+            android:clickable="true"
+            android:focusable="true"/>
+    </FrameLayout>
+
+    <!-- Nombre del canal actual -->
+    <TextView
+        android:id="@+id/tvNowPlayingName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="12dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- ══ Tabs: Categoría / Favoritos ══════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/tabCategoriaWrap"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingBottom="10dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tabCategoria"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Categoría"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"/>
+
+            <View
+                android:id="@+id/indCategoria"
+                android:layout_width="44dp"
+                android:layout_height="2dp"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabFavoritosWrap"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingBottom="10dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tabFavoritos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Favoritos"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"/>
+
+            <View
+                android:id="@+id/indFavoritos"
+                android:layout_width="44dp"
+                android:layout_height="2dp"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
     </LinearLayout>
-</FrameLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#14FFFFFF"/>
+
+    <!-- ══ Chips de categoría ═══════════════════════════════════════════════ -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+        <LinearLayout
+            android:id="@+id/chipContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp"/>
+    </HorizontalScrollView>
+</LinearLayout>

@@ -18,4 +18,11 @@
     <color name="badge_anime">#E91E63</color>
     <color name="badge_dorama">#26A69A</color>
     <color name="badge_sport">#43A047</color>
+
+    <!-- TV en vivo (modo TV) -->
+    <color name="tv_purple">#8B5CF6</color>
+    <color name="tv_purple_dark">#6D28D9</color>
+    <color name="tv_purple_light">#C4B5FD</color>
+    <color name="tv_bg">#100D1A</color>
+    <color name="tv_surface">#1B1526</color>
 </resources>
