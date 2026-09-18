@@ -36,16 +36,11 @@ public class HomeFragment extends Fragment {
     private BannerAdapter bannerAdapter;
     private final List<ContentItem> bannerItems = new ArrayList<>();
 
-    // Trending carousel
-    private ViewPager2 trendingPager;
-    private final List<ContentItem> trendingItems = new ArrayList<>();
-    private TrendingAdapter trendingAdapter;
-    private int trendingPage = 0;
-
     // Content rows
     private View rowTop10, rowNew, rowMovies, rowSeries, rowAnime, rowDoramas;
     private View rowShortsdramas;
     private View rowLiveGlass;
+    private View rowSagas;
     private View rowTvLive;
 
     // Continue watching
@@ -84,7 +79,6 @@ public class HomeFragment extends Fragment {
             headerView = hv;
             setupTopBar(hv);
             setupHero(hv);
-            setupTrendingCarousel(hv);
             setupContinueWatching(hv);
             setupRows(hv);
             loadAll();
@@ -251,35 +245,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // ── Trending carousel ────────────────────────────────────────────────────
-
-    private void setupTrendingCarousel(View view) {
-        try {
-            View carouselRoot = view.findViewById(R.id.rowTrendingCarousel);
-            if (carouselRoot == null) return;
-
-            trendingPager   = carouselRoot.findViewById(R.id.trendingPager);
-            View btnPrev    = carouselRoot.findViewById(R.id.trendingPrev);
-            View btnNext    = carouselRoot.findViewById(R.id.trendingNext);
-
-            trendingAdapter = new TrendingAdapter(requireContext(), trendingItems);
-            if (trendingPager == null) return;
-            trendingPager.setAdapter(trendingAdapter);
-            trendingPager.setOffscreenPageLimit(1);
-            trendingPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-                @Override public void onPageSelected(int p) { trendingPage = p; }
-            });
-
-            if (btnPrev != null) btnPrev.setOnClickListener(v -> {
-                if (trendingPage > 0) trendingPager.setCurrentItem(trendingPage - 1, true);
-            });
-            if (btnNext != null) btnNext.setOnClickListener(v -> {
-                if (trendingPage < trendingItems.size() - 1)
-                    trendingPager.setCurrentItem(trendingPage + 1, true);
-            });
-        } catch (Exception ignored) {}
-    }
-
     // ── Continuar viendo ─────────────────────────────────────────────────────
 
     private void setupContinueWatching(View view) {
@@ -321,9 +286,11 @@ public class HomeFragment extends Fragment {
         rowDoramas       = view.findViewById(R.id.rowDoramas);
         rowLiveGlass     = view.findViewById(R.id.rowLiveGlass);
         rowTvLive        = view.findViewById(R.id.rowTvLive);
+        rowSagas         = view.findViewById(R.id.rowSagas);
 
         initRow(rowNew,          "Últimos Estrenos",    new MoviesFragment());
         initRow(rowShortsdramas, "🎬 Shorts Dramas",   null);
+        initRow(rowSagas,        "🎬 Sagas Completas", new SagasFragment());
         initRow(rowMovies,       "Películas Populares", new MoviesFragment());
         initRow(rowSeries,       "Series Populares",    new SeriesFragment());
         initRow(rowAnime,        "Animes",              new AnimeFragment());
@@ -424,6 +391,7 @@ public class HomeFragment extends Fragment {
                 if (rowShortsdramas != null)  rowShortsdramas.setVisibility(View.GONE);
                 if (rowLiveGlass != null)     rowLiveGlass.setVisibility(View.GONE);
                 if (rowTvLive != null)        rowTvLive.setVisibility(View.GONE);
+                if (rowSagas != null)         rowSagas.setVisibility(View.GONE);
                 if (rowMovies != null)    rowMovies.setVisibility(View.VISIBLE);
                 if (rowSeries != null)    rowSeries.setVisibility(View.VISIBLE);
                 if (rowNew != null)       rowNew.setVisibility(View.VISIBLE);
@@ -480,6 +448,7 @@ public class HomeFragment extends Fragment {
                 if (rowSeries != null)       rowSeries.setVisibility(View.VISIBLE);
                 if (rowNew != null)          rowNew.setVisibility(View.VISIBLE);
                 if (rowTop10 != null)        rowTop10.setVisibility(View.VISIBLE);
+                if (rowSagas != null)        rowSagas.setVisibility(View.VISIBLE);
                 // Restore default row titles
                 setRowTitle(rowMovies,       "Películas Populares");
                 setRowTitle(rowSeries,       "Series Populares");
@@ -541,6 +510,18 @@ public class HomeFragment extends Fragment {
                 List<ContentItem> r = TmdbApi.fetchTopMovies();
                 h.post(() -> { try { if (isAdded()) fillRow(rowTop10, r); } catch (Exception ignored) {} });
             } catch (Exception ignored) {} });
+
+            // Sagas Completas: franquicias descubiertas dinámicamente entre lo popular
+            pool.execute(() -> {
+                List<ContentItem> r = TmdbApi.fetchFeaturedSagas();
+                h.post(() -> {
+                    try {
+                        if (!isAdded() || rowSagas == null) return;
+                        if (r.isEmpty()) rowSagas.setVisibility(View.GONE);
+                        else fillRow(rowSagas, r);
+                    } catch (Exception ignored) {}
+                });
+            });
 
             // ── Shorts Dramas (Dailymotion, random) ──
             pool.execute(() -> {

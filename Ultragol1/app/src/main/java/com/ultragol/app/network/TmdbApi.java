@@ -8,7 +8,13 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class TmdbApi {
     private static final String BASE = "https://api.themoviedb.org/3";
@@ -410,16 +416,19 @@ public class TmdbApi {
         return parse(arr, contentType);
     }
 
-    /** Result of {@link #fetchCollectionForMovie}: the saga's display name plus its movies. */
+    /** Result of {@link #fetchCollectionForMovie}: the saga's id/name plus its movies. */
     public static final class SagaResult {
+        public final int collectionId;
         public final String name;
         public final List<ContentItem> parts;
-        SagaResult(String name, List<ContentItem> parts) { this.name = name; this.parts = parts; }
+        SagaResult(int collectionId, String name, List<ContentItem> parts) {
+            this.collectionId = collectionId; this.name = name; this.parts = parts;
+        }
     }
 
     /**
      * If this movie belongs to a franchise/saga (TMDB "collection"), returns
-     * its display name plus every entry in that collection, sorted by
+     * its id/display name plus every entry in that collection, sorted by
      * release year. Empty parts for standalone movies, TV/anime/doramas, or
      * on any error — collections are a movie-only TMDB concept.
      */
@@ -427,18 +436,60 @@ public class TmdbApi {
         try {
             JSONObject details = new JSONObject(fetch("/movie/" + movieTmdbId + "?language=es-MX"));
             JSONObject collection = details.optJSONObject("belongs_to_collection");
-            if (collection == null) return new SagaResult("", new ArrayList<>());
+            if (collection == null) return new SagaResult(0, "", new ArrayList<>());
             int collectionId = collection.optInt("id", 0);
-            if (collectionId == 0) return new SagaResult(collection.optString("name", ""), new ArrayList<>());
+            if (collectionId == 0) return new SagaResult(0, collection.optString("name", ""), new ArrayList<>());
 
             JSONObject root = new JSONObject(fetch("/collection/" + collectionId + "?language=es-MX"));
             JSONArray parts = root.optJSONArray("parts");
             List<ContentItem> list = parts != null ? parse(parts, ContentItem.TYPE_MOVIE) : new ArrayList<>();
             list.sort((a, b) -> a.getYear().compareTo(b.getYear()));
-            return new SagaResult(root.optString("name", collection.optString("name", "")), list);
+            return new SagaResult(collectionId, root.optString("name", collection.optString("name", "")), list);
         } catch (Exception e) {
-            return new SagaResult("", new ArrayList<>());
+            return new SagaResult(0, "", new ArrayList<>());
         }
+    }
+
+    /**
+     * "Sagas Completas" discovery for the Home row: scans currently popular
+     * movies and returns one representative item per distinct franchise
+     * found — the earliest movie of each saga (opening it shows the rest of
+     * the collection via fetchCollectionForMovie). Always derived from live
+     * TMDB data, never a hardcoded collection list. Probes are run in
+     * parallel and capped so a home load never stalls waiting on this row.
+     */
+    public static List<ContentItem> fetchFeaturedSagas() {
+        List<ContentItem> candidates = new ArrayList<>();
+        try { candidates.addAll(fetchTopMovies()); } catch (Exception ignored) {}
+        try { candidates.addAll(fetchMovies()); } catch (Exception ignored) {}
+        try { candidates.addAll(fetchNewMovies()); } catch (Exception ignored) {}
+
+        Set<Integer> seenMovies = new HashSet<>();
+        List<ContentItem> unique = new ArrayList<>();
+        for (ContentItem c : candidates) {
+            if (c.getContentType() == ContentItem.TYPE_MOVIE && seenMovies.add(c.getTmdbId())) unique.add(c);
+        }
+        int probeLimit = Math.min(unique.size(), 30);
+
+        ExecutorService pool = Executors.newFixedThreadPool(6);
+        List<Future<SagaResult>> futures = new ArrayList<>();
+        for (int i = 0; i < probeLimit; i++) {
+            ContentItem c = unique.get(i);
+            futures.add(pool.submit(() -> fetchCollectionForMovie(c.getTmdbId())));
+        }
+
+        List<ContentItem> out = new ArrayList<>();
+        Set<Integer> seenCollections = new HashSet<>();
+        for (Future<SagaResult> f : futures) {
+            try {
+                SagaResult saga = f.get(10, TimeUnit.SECONDS);
+                if (saga.collectionId == 0 || saga.parts.size() < 2) continue;
+                if (!seenCollections.add(saga.collectionId)) continue;
+                out.add(saga.parts.get(0));
+            } catch (Exception ignored) {}
+        }
+        pool.shutdown();
+        return out;
     }
 
     /**

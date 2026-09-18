@@ -165,9 +165,6 @@
             android:overScrollMode="never"/>
     </LinearLayout>
 
-    <!-- ── Trending Carousel ── -->
-    <include android:id="@+id/rowTrendingCarousel" layout="@layout/row_trending_carousel"/>
-
     <!-- ── Rows ── -->
     <!-- ── Canales en vivo (TV) ── -->
     <include android:id="@+id/rowTvLive" layout="@layout/row_tv_live"/>
@@ -177,6 +174,9 @@
 
     <!-- ── EN VIVO Glass Carousel (between Últimos Estrenos and Películas Populares) ── -->
     <include android:id="@+id/rowLiveGlass" layout="@layout/row_live_glass"/>
+
+    <!-- ── Sagas Completas (en medio del feed) ── -->
+    <include android:id="@+id/rowSagas" layout="@layout/row_section"/>
 
     <include android:id="@+id/rowMovies"   layout="@layout/row_section"/>
     <include android:id="@+id/rowSeries"   layout="@layout/row_section"/>
